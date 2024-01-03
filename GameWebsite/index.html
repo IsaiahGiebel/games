@@ -50,7 +50,7 @@
     
     var imageMap = {};
     var leftKeyPressed;
-    let tweenRunning = false;
+    var tweenRunning = false;
     var shouldSpawn = false;
     
 
@@ -116,6 +116,7 @@
         bestScore = localStorage.getItem('bestScore');
         if (bestScore) {
             bestText.setText(bestScore);
+            best = bestScore
         }
 
 
@@ -146,14 +147,15 @@
             if (!this.leftKeyPressed && !tweenRunning) {
                 this.leftKeyPressed = true;
                 press(this,'left');
-
-                this.time.delayedCall(120, () => {
-                    if(shouldSpawn){
+                if(shouldSpawn){
+                    tweenRunning = true
+                    this.time.delayedCall(120, () => {
                         spot = spawnSpot()
                         placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
                         shouldSpawn=false
-                    }
-                });
+                        tweenRunning = false
+                    });
+                }  
 
             }
         });
@@ -174,14 +176,17 @@
             if (!this.rightKeyPressed && !tweenRunning) {
                 this.rightKeyPressed = true;
                 press(this,'right');
-                
-                this.time.delayedCall(120, () => {
-                    if(shouldSpawn){
+                if(shouldSpawn){
+                    tweenRunning = true
+                    this.time.delayedCall(120, () => {
                         spot = spawnSpot()
                         placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
                         shouldSpawn=false
-                    }
-                });
+                        tweenRunning = false
+                    });
+                }
+                
+                
             }
         });
 
@@ -200,14 +205,17 @@
             if (!this.upKeyPressed && !tweenRunning) {
                 this.upKeyPressed = true;
                 press(this,'up');
-                
-                this.time.delayedCall(120, () => {
-                    if(shouldSpawn){
+                if(shouldSpawn){
+                    tweenRunning = true
+                    this.time.delayedCall(120, () => {
                         spot = spawnSpot()
                         placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
                         shouldSpawn=false
-                    }
-                });
+                        tweenRunning = false
+                    });
+                }
+                
+                
     
             }
         });
@@ -227,15 +235,16 @@
             if (!this.downKeyPressed && !tweenRunning) {
                 this.downKeyPressed = true;
                 press(this,'down');
-                
-                this.time.delayedCall(120, () => {
-                    if(shouldSpawn){
+                if(shouldSpawn){
+                    tweenRunning = true
+                    this.time.delayedCall(120, () => {
                         spot = spawnSpot()
                         placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
                         shouldSpawn=false
-                    }
-                });
-
+                        tweenRunning = false
+                    });
+                }
+                
             }
         });
 
@@ -335,8 +344,8 @@
             }
         }
         
-       
         
+       
         return
         };
         if(key === 'right'){
@@ -374,6 +383,7 @@
                     }
             }
         }
+        
 
        
 
@@ -413,6 +423,7 @@
                     }
             }
         }
+        
 
    
 
@@ -453,6 +464,7 @@
                     }
             }
         }
+        
 
        
 
@@ -638,7 +650,6 @@
     }
 
 
-//for commit
 
 </script>
 
