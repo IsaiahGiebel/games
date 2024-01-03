@@ -1,0 +1,646 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Making your first Phaser 3 Game - Part 1</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+<script type="text/javascript">
+
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: false
+        }
+    },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    var text;
+    var score = 0;
+    var scoreText
+    var best = 0;
+    var bestText;
+    var bestScore;
+    var gameOver=false;
+    var random;
+    var array = [
+        [0,0,0,0], 
+        [0,0,0,0], 
+        [0,0,0,0], 
+        [0,0,0,0]
+    ];
+    var cursors;
+    var count;
+    
+    var imageMap = {};
+    var leftKeyPressed;
+    let tweenRunning = false;
+    var shouldSpawn = false;
+    
+
+
+    var game = new Phaser.Game(config);
+
+    function preload (){
+
+        this.load.image('2048background', 'assets/2048background.png');
+        this.load.image('scoreBackground', 'assets/scoreBackground.png');
+        this.load.image('gridBackground', 'assets/gridBackground.png');
+        this.load.image('0tile', 'assets/0tile.png');
+        this.load.image('restartButton', 'assets/restartButton.png');
+
+        //tiles
+        this.load.image('2tile','assets/2tile.png');
+        this.load.image('4tile','assets/4tile.png');
+        this.load.image('8tile','assets/8tile.png');
+        this.load.image('16tile','assets/16tile.png');
+        this.load.image('32tile','assets/32tile.png');
+        this.load.image('64tile','assets/64tile.png');
+        this.load.image('128tile','assets/128tile.png');
+        this.load.image('256tile','assets/256tile.png');
+        this.load.image('512tile','assets/512tile.png');
+        this.load.image('1024tile','assets/1024tile.png');
+        this.load.image('2048tile','assets/2048tile.png');
+        this.load.image('4096tile','assets/4096tile.png');
+        this.load.image('8192tile','assets/8192tile.png');
+        this.load.image('16384tile','assets/16384tile.png');
+        this.load.image('32768tile','assets/32768tile.png');
+        this.load.image('65536tile','assets/65536tile.png');
+        this.load.image('131072tile','assets/131072tile.png');
+
+
+
+
+    }
+
+    function create (){
+        
+
+        //backgrounds
+        this.add.image(400, 301, '2048background');
+        this.add.image(420, 32, 'scoreBackground');
+        this.add.image(550, 32, 'scoreBackground');
+        this.add.image(400, 350, 'gridBackground');
+
+        //defaultsquares    
+        for(i=0; i<4; i++){
+            for(j=0; j<4; j++){
+                placeTile(this,0,i,j);
+            }
+        }
+
+        
+        //text
+        text = this.add.text(200, 24, '2048', { fontSize: '48px', fill: '#000'});
+        text = this.add.text(530, 8, 'BEST', { fontSize: '16px', fill: '#000' });
+        text = this.add.text(395, 8, 'SCORE', { fontSize: '16px', fill: '#000' });
+        scoreText = this.add.text(410, 28, '0', { fontSize: '24px', fill: '#000' });
+        bestText = this.add.text(540, 28, best, { fontSize: '24px', fill: '#000' });
+
+        bestScore = localStorage.getItem('bestScore');
+        if (bestScore) {
+            bestText.setText(bestScore);
+        }
+
+
+        //restart button
+        var restartBtn = this.add.image(500, 100, 'restartButton').setInteractive();
+
+        restartBtn.on('pointerdown', () => {
+            score = 0
+            this.scene.restart();
+        });
+
+
+        //initialize game
+
+        var spot = spawnSpot()
+        placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+        spot = spawnSpot()
+        placeTile(this,2,parseInt(spot[0]),parseInt(spot[1]));
+
+        //cursor left
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+
+        this.leftKeyPressed = false;
+        this.repeatActionTimer = null;
+
+        this.input.keyboard.on('keydown_LEFT', () => {
+            if (!this.leftKeyPressed && !tweenRunning) {
+                this.leftKeyPressed = true;
+                press(this,'left');
+
+                this.time.delayedCall(120, () => {
+                    if(shouldSpawn){
+                        spot = spawnSpot()
+                        placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                        shouldSpawn=false
+                    }
+                });
+
+            }
+        });
+
+        this.input.keyboard.on('keyup_LEFT', () => {
+            this.leftKeyPressed = false;
+            if (this.repeatActionTimer) {
+                this.repeatActionTimer.remove(false);
+            }
+        });
+
+
+        // cursor right
+        this.rightKeyPressed = false;
+        this.repeatActionTimer = null;
+
+        this.input.keyboard.on('keydown_RIGHT', () => {
+            if (!this.rightKeyPressed && !tweenRunning) {
+                this.rightKeyPressed = true;
+                press(this,'right');
+                
+                this.time.delayedCall(120, () => {
+                    if(shouldSpawn){
+                        spot = spawnSpot()
+                        placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                        shouldSpawn=false
+                    }
+                });
+            }
+        });
+
+        this.input.keyboard.on('keyup_RIGHT', () => {
+            this.rightKeyPressed = false;
+            if (this.repeatActionTimer) {
+                this.repeatActionTimer.remove(false);
+            }
+        });
+
+        // cursor up
+        this.upKeyPressed = false;
+        this.repeatActionTimer = null;
+
+        this.input.keyboard.on('keydown_UP', () => {
+            if (!this.upKeyPressed && !tweenRunning) {
+                this.upKeyPressed = true;
+                press(this,'up');
+                
+                this.time.delayedCall(120, () => {
+                    if(shouldSpawn){
+                        spot = spawnSpot()
+                        placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                        shouldSpawn=false
+                    }
+                });
+    
+            }
+        });
+
+        this.input.keyboard.on('keyup_UP', () => {
+            this.upKeyPressed = false;
+            if (this.repeatActionTimer) {
+                this.repeatActionTimer.remove(false);
+            }
+        });
+
+        // cursor down
+        this.downKeyPressed = false;
+        this.repeatActionTimer = null;
+
+        this.input.keyboard.on('keydown_DOWN', () => {
+            if (!this.downKeyPressed && !tweenRunning) {
+                this.downKeyPressed = true;
+                press(this,'down');
+                
+                this.time.delayedCall(120, () => {
+                    if(shouldSpawn){
+                        spot = spawnSpot()
+                        placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                        shouldSpawn=false
+                    }
+                });
+
+            }
+        });
+
+        this.input.keyboard.on('keyup_DOWN', () => {
+            this.downKeyPressed = false;
+            if (this.repeatActionTimer) {
+                this.repeatActionTimer.remove(false);
+            }
+        });
+
+        
+
+    }
+
+    function update (){
+        if (gameOver){
+        return;
+        }
+
+        if (this.cursors.left.isDown && !this.leftKeyPressed) {
+        // Logic for when the left key is held down
+        this.leftKeyPressed = true;
+        // Your repeated action logic
+        } else if (!this.cursors.left.isDown && this.leftKeyPressed) {
+            // Logic for when the left key is released
+            this.leftKeyPressed = false;
+        }
+
+        if (this.cursors.right.isDown && !this.rightKeyPressed) {
+        // Logic for when the left key is held down
+        this.rightKeyPressed = true;
+        // Your repeated action logic
+        } else if (!this.cursors.right.isDown && this.rightKeyPressed) {
+            // Logic for when the left key is released
+            this.rightKeyPressed = false;
+        }
+
+        if (this.cursors.up.isDown && !this.upKeyPressed) {
+        // Logic for when the left key is held down
+        this.upKeyPressed = true;
+        // Your repeated action logic
+        } else if (!this.cursors.up.isDown && this.upKeyPressed) {
+            // Logic for when the left key is released
+            this.upKeyPressed = false;
+        }
+
+        if (this.cursors.down.isDown && !this.downKeyPressed) {
+        // Logic for when the left key is held down
+        this.downKeyPressed = true;
+        // Your repeated action logic
+        } else if (!this.cursors.down.isDown && this.downKeyPressed) {
+            // Logic for when the left key is released
+            this.downKeyPressed = false;
+        }
+    }
+
+    //single key press
+    function press(scene, key){
+        let x = 0;
+        let comb = true;
+        console.log('press')
+        if(key === 'left'){
+            for(i = 1; i<array.length; i++){
+                for(j=0;j<array.length;j++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(i-x > -1){
+                            if(array[i-x][j]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i-n][j]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i-x,j,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i-x][j]==0 && i-x==0){
+                                shouldSpawn = true
+                                slideTile(i,j,i-x,j,scene)
+                            }
+                               
+                            else if(i-x-1!=-1){
+                                if(array[i-x][j]==0 && array[i-x-1][j]!=0 && array[i-x-1][j]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i-x,j,scene)
+                                }
+                                                            
+                            }
+                               
+                            x++
+                        }
+                        
+                    }
+            }
+        }
+        
+       
+        
+        return
+        };
+        if(key === 'right'){
+            console.log('key===right')
+            for(i = 2; i>-1; i--){
+                for(j=0;j<array.length;j++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(i+x < 4){
+                            if(array[i+x][j]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i+n][j]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i+x,j,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i+x][j]==0 && i+x==3){
+                                shouldSpawn = true
+                                slideTile(i,j,i+x,j,scene)
+                            }
+                            
+                            else if(i+x+1!=4){
+                                if(array[i+x][j]==0 && array[i+x+1][j]!=0 && array[i+x+1][j]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i+x,j,scene)
+                                }
+                            }
+                            x++
+                        }
+                    }
+            }
+        }
+
+       
+
+        return
+        };
+        if(key === 'up'){
+            for(j = 1; j<array.length; j++){
+                for(i=0;i<array.length;i++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(j-x > -1){
+                            if(array[i][j-x]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i][j-n]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i,j-x,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i][j-x]==0 && j-x==0){
+                                shouldSpawn = true
+                                slideTile(i,j,i,j-x,scene)
+                            }
+                             
+                            else if(j-x-1!=-1){
+                                if(array[i][j-x]==0 && array[i][j-x-1]!=0 && array[i][j-x-1]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i,j-x,scene)
+                                }
+                            }   
+                            x++
+                        }
+                    }
+            }
+        }
+
+   
+
+        return
+        };
+        if(key === 'down'){
+            console.log('key===right')
+            for(j = 2; j>-1; j--){
+                for(i=0;i<array.length;i++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(j+x < 4){
+                            if(array[i][j+x]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i][j+n]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i,j+x,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i][j+x]==0 && j+x==3){
+                                shouldSpawn = true
+                                slideTile(i,j,i,j+x,scene)
+                            }
+                            
+                            else if(j+x+1!=4){
+                                if(array[i][j+x]==0 && array[i][j+x+1]!=0 && array[i][j+x+1]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i,j+x,scene)
+                                }
+                            }
+                            x++
+                        }
+                    }
+            }
+        }
+
+       
+
+        return
+        };
+    }
+
+    //key held down
+    function repeat(scene, key){
+        
+    }  
+
+    //gives a 90% chance or returning 2 and 10% chance of returning 4
+    function twoFour(){
+        random = Math.floor(Math.random() * 10);
+        if(random>0){
+            return 2
+        }
+        else{
+            return 4
+        }
+
+    }
+
+    //find a random empty spot to spawn a tile
+    function spawnSpot(){
+        count = 0;
+        for(i=0; i<array.length; i++){
+            for(j=0; j<array.length; j++){
+                if(array[i][j]===0){
+                    count++
+                }
+            }
+        }
+        random = Math.floor(Math.random() * count);
+        index = 0;
+        for(i=0; i<array.length; i++){
+            for(j=0; j<array.length; j++){
+                if(array[i][j]===0){
+                    random--
+                }
+                if(random<0){
+                    console.log("spawnspot:" + i +''+ j)
+                    return i +''+ j;
+                }
+            }
+        }
+    }
+
+    function combine2(){
+
+    }
+
+    function placeTile(scene, tile, index, jndex){
+        console.log(jndex)
+        console.log(index)
+        console.log((jndex*4) + index)
+        const y = 206 + jndex * 96;
+        const x = 256 + index * 96;
+
+        //update array
+        array[index][jndex] = tile;
+
+        //make tile so that it is key for png
+        tile = tile + 'tile';
+
+        //converts the 4x4 index to 1x16
+       // mapIndex = 0
+        const mapIndex = jndex*4 + index; 
+        console.log("x: " + x + " y: " + y + " tile: " + tile) 
+
+        //place the tile image and store image in map
+    //    scene.add.image(x, y, tile);
+        if(tile!='0tile'){
+            imageMap[mapIndex] = scene.add.image(x, y, tile);
+        }
+        else {
+            scene.add.image(x, y, tile)
+        }
+        console.log(imageMap[mapIndex])
+        console.log(mapIndex)
+
+    
+    }
+
+    function slideTile(index, jndex, newIndex, newJndex, scene) {
+        console.log('slideTeSTfncigr')
+        tweenRunning = true
+        const mapIndex = jndex*4 + index;
+        const newMapIndex = newJndex*4 + newIndex;
+
+        const newY = 206 + newJndex * 96;
+        const newX = 256 + newIndex * 96;
+        const image = imageMap[mapIndex]
+        console.log('map index', jndex*4 + index)
+        console.log('array index',index,jndex)
+        console.log(imageMap[mapIndex])
+        console.log('array value', array[index][jndex])
+        console.log('newIndex and newJndex: ' + newIndex + ' ' + newJndex)
+
+        
+        array[newIndex][newJndex] = array[index][jndex];
+        array[index][jndex] = 0;
+
+
+
+        scene.tweens.add({
+            targets: image,
+            x: newX,
+            y: newY,
+            ease: 'Linear',
+            duration: 100, 
+            onComplete: function () {
+                tweenRunning = false;
+                imageMap[newMapIndex] = imageMap[mapIndex];
+                imageMap[mapIndex] = undefined;
+            }  
+              
+                  
+        });
+
+        
+    //    if(array[index][jndex]==array[newIndex][newJndex]){
+      //      imageMap[newMapIndex].destroy()
+     //   }
+        
+        
+}
+
+    
+
+    function combine(index, jndex, index2, jndex2, scene){
+        tweenRunning = true
+        const mapIndex = jndex*4 + index;
+        const mapIndex2 = jndex2*4 + index2;
+
+        const newY = 206 + jndex2 * 96;
+        const newX = 256 + index2 * 96;
+        const image = imageMap[mapIndex]
+        console.log("combine")
+        console.log(imageMap[mapIndex])
+        const x = newX
+        const y = newY
+
+          
+        array[index2][jndex2] = array[index2][jndex2]*2 + 0.5  //add 0.5 so cant combine (2,2,4,0) => (8,0,0,0)
+        array[index][jndex] = 0
+        
+
+
+        scene.tweens.add({
+            targets: image,
+            x: newX,
+            y: newY,
+            ease: 'Linear',
+            duration: 100, 
+            onComplete: function () {
+                tweenRunning = false;
+                imageMap[mapIndex].destroy();
+                
+                imageMap[mapIndex2].destroy();
+
+                array[index2][jndex2] = Math.floor(array[index2][jndex2])
+
+                tile = array[index2][jndex2] + 'tile'
+
+                imageMap[mapIndex2] = scene.add.image(x, y, tile);
+                
+                score = score + array[index2][jndex2]
+                scoreText.setText(score);
+
+                if(score>best){
+                    best = score
+                    bestText.setText(best);
+
+                    localStorage.setItem('bestScore', best);
+                }
+
+            }    
+                  
+        });
+
+    }
+
+
+
+
+</script>
+
+</body>
+</html>

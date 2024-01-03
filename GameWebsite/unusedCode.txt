@@ -1,0 +1,36 @@
+        this.add.image(256, 206, 'defaultSquare'); //1,1
+        this.add.image(352, 206, 'defaultSquare'); //2,1
+        this.add.image(448, 206, 'defaultSquare'); //3,1
+        this.add.image(544, 206, 'defaultSquare'); //4,1
+
+        this.add.image(256, 302, 'defaultSquare'); //1,2
+        this.add.image(352, 302, 'defaultSquare'); //2,2
+        this.add.image(448, 302, 'defaultSquare'); //3,2
+        this.add.image(544, 302, 'defaultSquare'); //4,2
+
+        this.add.image(256, 398, 'defaultSquare'); //1,3
+        this.add.image(352, 398, 'defaultSquare'); //2,3
+        this.add.image(448, 398, 'defaultSquare'); //3,3
+        this.add.image(544, 398, 'defaultSquare'); //4,3
+
+        this.add.image(256, 494, 'defaultSquare'); //1,4
+        this.add.image(352, 494, 'defaultSquare'); //2,4
+        this.add.image(448, 494, 'defaultSquare'); //3,4
+        this.add.image(544, 494, 'defaultSquare'); //4,4
+
+
+        // Start a timer for 1 second to check if the key is held down
+                this.repeatActionTimer = this.time.addEvent({
+                    delay: 1000,
+                    callback: () => {
+                        if (this.rightKeyPressed) {
+                            repeat(this,'right');
+                        }
+                    },
+                    loop: false
+                });
+
+
+        spot = spawnSpot()
+        console.log('spawnspot' + spot)
+        placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
