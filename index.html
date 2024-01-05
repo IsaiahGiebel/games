@@ -1,0 +1,662 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>2048</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap" rel="stylesheet">
+</head>
+</head>
+<body>
+<script type="text/javascript">
+
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: false
+        }
+    },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    //global variables
+    var text;
+    var score = 0;
+    var scoreText
+    var best = 0;
+    var bestText;
+    var bestScore;
+    var array = [
+        [0,0,0,0], 
+        [0,0,0,0], 
+        [0,0,0,0], 
+        [0,0,0,0]
+    ];
+    var cursors;
+    var imageMap = {};
+    var leftKeyPressed;
+    var hasWon = false;
+    var tweenRunning = false;
+    var shouldSpawn = false;
+    var game = new Phaser.Game(config);
+
+    function preload (){
+
+        //background etc.
+        this.load.image('2048background', 'assets/2048background.png');
+        this.load.image('scoreBackground', 'assets/scoreBackground.png');
+        this.load.image('gridBackground', 'assets/gridBackground.png');
+        this.load.image('0tile', 'assets/0tile.png');
+        this.load.image('restartButton', 'assets/restartButton.png');
+        this.load.image('gameOver', 'assets/gameOver.png');
+        this.load.image('keepGoing', 'assets/keepGoing.png');
+        this.load.image('tryAgain', 'assets/tryAgain.png');
+
+        //tiles
+        this.load.image('2tile','assets/2tile.png');
+        this.load.image('4tile','assets/4tile.png');
+        this.load.image('8tile','assets/8tile.png');
+        this.load.image('16tile','assets/16tile.png');
+        this.load.image('32tile','assets/32tile.png');
+        this.load.image('64tile','assets/64tile.png');
+        this.load.image('128tile','assets/128tile.png');
+        this.load.image('256tile','assets/256tile.png');
+        this.load.image('512tile','assets/512tile.png');
+        this.load.image('1024tile','assets/1024tile.png');
+        this.load.image('2048tile','assets/2048tile.png');
+        this.load.image('4096tile','assets/4096tile.png');
+        this.load.image('8192tile','assets/8192tile.png');
+        this.load.image('16384tile','assets/16384tile.png');
+        this.load.image('32768tile','assets/32768tile.png');
+        this.load.image('65536tile','assets/65536tile.png');
+        this.load.image('131072tile','assets/131072tile.png');
+
+    }
+
+
+    function create (){
+
+        //backgrounds
+        this.add.image(400, 301, '2048background');
+        this.add.image(420, 50, 'scoreBackground');
+        this.add.image(550, 50, 'scoreBackground');
+        this.add.image(400, 350, 'gridBackground');
+
+        //defaultsquares    
+        for(i=0; i<4; i++){
+            for(j=0; j<4; j++){
+                placeTile(this,0,i,j);
+            }
+        }
+
+        
+        //text
+        text = this.add.text(200, 42, '2048', { fontSize: '60px', fill: '#000', fontFamily: '"Roboto", sans-serif'});
+        text = this.add.text(530, 28, 'BEST', { fontSize: '16px', fill: '#000'});
+        text = this.add.text(395, 28, 'SCORE', { fontSize: '16px', fill: '#000'});
+        scoreText = this.add.text(420, 58, '0', { fontSize: '24px', fill: '#000' }).setOrigin(0.5, 0.5);
+        bestText = this.add.text(550, 58, best, { fontSize: '24px', fill: '#000' }).setOrigin(0.5, 0.5);
+
+        bestScore = localStorage.getItem('bestScore');
+        if (bestScore) {
+            bestText.setText(bestScore);
+            best = bestScore
+        }
+
+
+        //new game button
+        var restartBtn = this.add.image(485, 115, 'restartButton').setInteractive();
+
+        restartBtn.on('pointerdown', () => {
+            score = 0
+            this.scene.restart();
+            tweenRunning = false
+        });
+
+
+        //initialize game with two tiles
+        var spot = spawnSpot()
+        placeTile(this,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+        spot = spawnSpot()
+        placeTile(this,2,parseInt(spot[0]),parseInt(spot[1]));
+
+
+        //cursors
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        //cursor left
+        this.leftKeyPressed = false;
+
+        this.input.keyboard.on('keydown_LEFT', () => {
+            if (!this.leftKeyPressed && !tweenRunning) {
+                this.leftKeyPressed = true;
+                press(this,'left');
+            }
+        });
+
+        this.input.keyboard.on('keyup_LEFT', () => {
+            this.leftKeyPressed = false;
+        });
+
+
+        // cursor right
+        this.rightKeyPressed = false;
+
+        this.input.keyboard.on('keydown_RIGHT', () => {
+            if (!this.rightKeyPressed && !tweenRunning) {
+                this.rightKeyPressed = true;
+                press(this,'right');
+            }
+        });
+
+        this.input.keyboard.on('keyup_RIGHT', () => {
+            this.rightKeyPressed = false;
+        });
+
+
+        // cursor up
+        this.upKeyPressed = false;
+
+        this.input.keyboard.on('keydown_UP', () => {
+            if (!this.upKeyPressed && !tweenRunning) {
+                this.upKeyPressed = true;
+                press(this,'up');
+            }
+        });
+
+        this.input.keyboard.on('keyup_UP', () => {
+            this.upKeyPressed = false;
+        });
+
+
+        // cursor down
+        this.downKeyPressed = false;
+
+        this.input.keyboard.on('keydown_DOWN', () => {
+            if (!this.downKeyPressed && !tweenRunning) {
+                this.downKeyPressed = true;
+                press(this,'down');
+            }
+        });
+
+        this.input.keyboard.on('keyup_DOWN', () => {
+            this.downKeyPressed = false;
+        });
+
+        
+
+    }
+
+    function update (){
+        //could have put key press logic here but was not necessary       
+    }
+
+    //handles where tiles go for key press
+    function press(scene, key){
+        let x = 0;
+        let comb = true;
+        let spot = 0;
+        //if left key is pressed
+        if(key === 'left'){
+            for(i = 1; i<array.length; i++){
+                for(j=0;j<array.length;j++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(i-x > -1){
+                            if(array[i-x][j]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i-n][j]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i-x,j,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i-x][j]==0 && i-x==0){
+                                shouldSpawn = true
+                                slideTile(i,j,i-x,j,scene)
+                            }
+                               
+                            else if(i-x-1!=-1){
+                                if(array[i-x][j]==0 && array[i-x-1][j]!=0 && array[i-x-1][j]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i-x,j,scene)
+                                }
+                                                            
+                            }
+                               
+                            x++
+                        }
+                        
+                    }
+            }
+        }
+        //for spawning a new tile after at least one tile has moved
+        if(shouldSpawn){
+            tweenRunning = true
+            scene.time.delayedCall(120, () => {
+                spot = spawnSpot()
+                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                shouldSpawn=false
+                //checks if game is over
+                if(isGameOver()){
+                    tweenRunning = true
+                    gameOver(scene)
+                }
+                else{
+                    tweenRunning = false
+                }
+            });
+        }
+        return
+        };
+
+        if(key === 'right'){
+            for(i = 2; i>-1; i--){
+                for(j=0;j<array.length;j++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(i+x < 4){
+                            if(array[i+x][j]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i+n][j]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i+x,j,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i+x][j]==0 && i+x==3){
+                                shouldSpawn = true
+                                slideTile(i,j,i+x,j,scene)
+                            }
+                            
+                            else if(i+x+1!=4){
+                                if(array[i+x][j]==0 && array[i+x+1][j]!=0 && array[i+x+1][j]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i+x,j,scene)
+                                }
+                            }
+                            x++
+                        }
+                    }
+            }
+        }
+        if(shouldSpawn){
+            tweenRunning = true
+            scene.time.delayedCall(120, () => {
+                spot = spawnSpot()
+                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                shouldSpawn=false
+                if(isGameOver()){
+                    tweenRunning = true
+                    gameOver(scene)
+                }
+                else{
+                    tweenRunning = false
+                }            
+            });
+        }
+        return
+        };
+
+        if(key === 'up'){
+            for(j = 1; j<array.length; j++){
+                for(i=0;i<array.length;i++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(j-x > -1){
+                            if(array[i][j-x]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i][j-n]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i,j-x,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i][j-x]==0 && j-x==0){
+                                shouldSpawn = true
+                                slideTile(i,j,i,j-x,scene)
+                            }
+                             
+                            else if(j-x-1!=-1){
+                                if(array[i][j-x]==0 && array[i][j-x-1]!=0 && array[i][j-x-1]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i,j-x,scene)
+                                }
+                            }   
+                            x++
+                        }
+                    }
+            }
+        }
+        if(shouldSpawn){
+            tweenRunning = true
+            scene.time.delayedCall(120, () => {
+                spot = spawnSpot()
+                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                shouldSpawn=false
+                if(isGameOver()){
+                    tweenRunning = true
+                    gameOver(scene)
+                }
+                else{
+                    tweenRunning = false
+                }            
+            });
+        }
+        return
+        };
+
+        if(key === 'down'){
+            for(j = 2; j>-1; j--){
+                for(i=0;i<array.length;i++){
+                    if(array[i][j]!=0){
+                        x=1
+                        while(j+x < 4){
+                            if(array[i][j+x]==array[i][j]){
+                                for(n = 1; n < x; n++){
+                                    if(array[i][j+n]!=0){
+                                        comb = false
+                                    }
+                                }
+                                if(comb){
+                                    shouldSpawn = true
+                                    combine(i,j,i,j+x,scene)
+                                }
+                                comb = true                               
+                            }
+                            else if(array[i][j+x]==0 && j+x==3){
+                                shouldSpawn = true
+                                slideTile(i,j,i,j+x,scene)
+                            }
+                            
+                            else if(j+x+1!=4){
+                                if(array[i][j+x]==0 && array[i][j+x+1]!=0 && array[i][j+x+1]!=array[i][j]){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i,j+x,scene)
+                                }
+                            }
+                            x++
+                        }
+                    }
+            }
+        }
+        if(shouldSpawn){
+            tweenRunning = true
+            scene.time.delayedCall(120, () => {
+                spot = spawnSpot()
+                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                shouldSpawn=false
+                if(isGameOver()){
+                    tweenRunning = true
+                    gameOver(scene)
+                }
+                else{
+                    tweenRunning = false
+                }            
+            });
+        }
+        return
+        };
+    }
+
+    //gives a 90% chance or returning 2 and 10% chance of returning 4
+    function twoFour(){
+        const random = Math.floor(Math.random() * 10);
+        if(random>0){
+            return 2
+        }
+        else{
+            return 4
+        }
+
+    }
+
+    //find a random empty spot to spawn a tile
+    function spawnSpot(){
+        let count = 0;
+        for(let i=0; i<array.length; i++){
+            for(let j=0; j<array.length; j++){
+                if(array[i][j]===0){
+                    count++
+                }
+            }
+        }
+        let random = Math.floor(Math.random() * count);
+        for(let i=0; i<array.length; i++){
+            for(let j=0; j<array.length; j++){
+                if(array[i][j]===0){
+                    random--
+                }
+                if(random<0){
+                    return i +''+ j;
+                }
+            }
+        }
+    }
+
+    //places new tile on screen
+    function placeTile(scene, tile, index, jndex){
+        const y = 206 + jndex * 96;
+        const x = 256 + index * 96;
+
+        //update array
+        array[index][jndex] = tile;
+
+        //make tile so that it is key for png
+        tile = tile + 'tile';
+
+        //converts the 4x4 index to 1x16
+       // mapIndex = 0
+        const mapIndex = jndex*4 + index; 
+
+        //place the tile image and store image in map
+        //scene.add.image(x, y, tile);
+        if(tile!='0tile'){
+            imageMap[mapIndex] = scene.add.image(x, y, tile);
+        }
+        else {
+            scene.add.image(x, y, tile)
+        }    
+    }
+
+    //slides a tile
+    function slideTile(index, jndex, newIndex, newJndex, scene) {
+        tweenRunning = true
+        const mapIndex = jndex*4 + index;
+        const newMapIndex = newJndex*4 + newIndex;
+        const newY = 206 + newJndex * 96;
+        const newX = 256 + newIndex * 96;
+        const image = imageMap[mapIndex]
+       
+        array[newIndex][newJndex] = array[index][jndex];
+        array[index][jndex] = 0;
+
+        //for sliding animation
+        scene.tweens.add({
+            targets: image,
+            x: newX,
+            y: newY,
+            ease: 'Linear',
+            duration: 100, 
+            onComplete: function () {
+                imageMap[newMapIndex] = imageMap[mapIndex];
+                imageMap[mapIndex] = undefined;
+                tweenRunning = false;
+            }            
+        });    
+    }
+
+    //combines two tiles
+    function combine(index, jndex, index2, jndex2, scene){
+        tweenRunning = true
+        const mapIndex = jndex*4 + index;
+        const mapIndex2 = jndex2*4 + index2;
+
+        const newY = 206 + jndex2 * 96;
+        const newX = 256 + index2 * 96;
+        const image = imageMap[mapIndex]
+          
+        array[index2][jndex2] = array[index2][jndex2]*2 + 0.5  //add 0.5 so cant combine (2,2,4,0) => (8,0,0,0)
+        array[index][jndex] = 0
+        
+        //for sliding animation
+        scene.tweens.add({
+            targets: image,
+            x: newX,
+            y: newY,
+            ease: 'Linear',
+            duration: 100, 
+            onComplete: function () {
+
+                //try to destroy old image (frequently errors)
+                try {
+                    imageMap[mapIndex].destroy();
+                } catch (error) {
+                    console.error('Error destroying the image:', error);
+                    scene.time.delayedCall(200, () => {
+                        errOccured(scene)
+                    });
+                }
+
+                //try to destroy old image (frequently errors)
+                try {
+                    imageMap[mapIndex2].destroy();
+                } catch (error) {
+                    console.error('Error destroying the image:', error);
+                    scene.time.delayedCall(200, () => {
+                        errOccured(scene)
+                    });
+                }
+                
+                array[index2][jndex2] = Math.floor(array[index2][jndex2]) //undo the addition of 0.5
+
+                tile = array[index2][jndex2] + 'tile'
+                imageMap[mapIndex2] = scene.add.image(newX, newY, tile);
+
+                tweenRunning = false;
+                
+
+                //check if the game is won every time a combination is made
+                if(!hasWon){
+                    if(array[index2][jndex2]==2048){
+                        scene.time.delayedCall(200, () => {
+                            hasWon = true
+                            win(scene)
+                        });
+                    }
+                    
+                }
+
+                //update score
+                score = score + array[index2][jndex2]
+                scoreText.setText(score);
+                
+                //update best score
+                if(score>best){
+                    best = score
+                    bestText.setText(best);
+
+                    localStorage.setItem('bestScore', best);
+                }
+            }           
+        });
+    }
+
+    //goes through the array and checks if exists two same tiles next to eachother or if exists empty space
+    function isGameOver(){
+        for(let i = 0; i<3; i++){
+            for(let j = 0; j<4; j++){
+                if(array[i][j]==0 || array[i][j]==array[i+1][j]){
+                    return false;
+                }
+                
+            }
+        }
+        for(j = 0; j<4; j++){
+            if(array[3][j]==0){
+                return false
+            }
+        }
+        for(j = 0; j<3; j++){
+            for(i = 0; i<4; i++){
+                if(array[i][j]==0 || array[i][j]==array[i][j+1]){
+                    return false
+                }
+                
+            }
+        }
+        for(i = 0; i<4; i++){
+            if(array[i][3]==0){
+                return false
+            }
+        }
+        return true
+    }
+
+    //display game over 'pop up'
+    function gameOver(scene){
+        let backDrop = scene.add.image(400, 350, 'gameOver');
+        let over = scene.add.text(400, 250, 'Game Over!', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);
+        let againBtn = scene.add.image(400, 350, 'tryAgain').setInteractive();
+        againBtn.on('pointerdown', () => {
+            score = 0
+            scene.scene.restart();
+            tweenRunning = false
+        });
+    }
+
+    //display win 'pop up'
+    function win(scene){
+        tweenRunning = true
+        let backDrop = scene.add.image(400, 350, 'gameOver');
+        let winText = scene.add.text(400, 250, 'You Win!', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);
+        
+        let contBtn = scene.add.image(400, 350, 'keepGoing').setInteractive();
+        contBtn.on('pointerdown', () => {
+            contBtn.destroy();
+            backDrop.destroy();
+            winText.destroy();
+            tweenRunning = false
+        });
+    }
+
+    //for when an error occurs(typically when cannot destroy image. happens maybe because images cannot be loaded fast enough)
+    function errOccured(scene){
+        tweenRunning = true
+        let backDrop = scene.add.image(400, 350, 'gameOver');
+        let errText = scene.add.text(400, 250, 'Error', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);
+        
+    }
+
+</script>
+</body>
+</html>
