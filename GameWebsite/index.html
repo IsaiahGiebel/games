@@ -127,6 +127,7 @@
         restartBtn.on('pointerdown', () => {
             score = 0
             this.scene.restart();
+            tweenRunning = false
         });
 
 
@@ -629,6 +630,7 @@
         againBtn.on('pointerdown', () => {
             score = 0
             scene.scene.restart();
+            tweenRunning = false
         });
     }
 
