@@ -56,7 +56,7 @@
     var tweenRunning = false;
     var shouldSpawn = false;
     var game = new Phaser.Game(config);
-    var move = 0;
+    var winScreen = false;
 
     function preload (){
 
@@ -107,7 +107,6 @@
             }
         }
 
-        
         //text
         text = this.add.text(200, 42, '2048', { fontSize: '60px', fill: '#000', fontFamily: '"Roboto", sans-serif'});
         text = this.add.text(530, 28, 'BEST', { fontSize: '16px', fill: '#000'});
@@ -121,7 +120,6 @@
             best = bestScore
         }
 
-
         //new game button
         var restartBtn = this.add.image(485, 115, 'restartButton').setInteractive();
 
@@ -129,6 +127,8 @@
             score = 0
             this.scene.restart();
             tweenRunning = false
+            hasWon = false
+            winScreen = false
         });
 
 
@@ -201,8 +201,6 @@
             this.downKeyPressed = false;
         });
 
-        
-
     }
 
     function update (){
@@ -210,22 +208,13 @@
     }
 
 
-///cssdsds   sdsdsdsddssd   sddssdssdsd   ssdsdsdsd   sdsdsdsds  sddsdsdsd
-
-
-
     //handles where tiles go for key press
     function press(scene, key){
         let x = 0;
-        let comb = true;
         let spot = 0;
         let current = null;
-        let string = ''
-        
         shouldSpawn = true
 
-        
-        
         //if left key is pressed
         if(key === 'left'){
             for(i = 1; i<array.length; i++){
@@ -253,10 +242,7 @@
                         }                               
                     }                       
                 }
-            }
-        
-        //for spawning a new tile after at least one tile has moved
-            
+            }     
             return        
         };
 
@@ -289,8 +275,7 @@
                         }                               
                     }
                 }
-            }
-            
+            }        
             return
         };
 
@@ -323,8 +308,7 @@
                         }                               
                     }
                 }
-            }
-            
+            }      
             return
         };
 
@@ -357,8 +341,7 @@
                         }                               
                     }
                 }
-            }
-            
+            }        
             return
         };
     }
@@ -410,11 +393,9 @@
         tile = tile + 'tile';
 
         //converts the 4x4 index to 1x16
-       // mapIndex = 0
         const mapIndex = jndex*4 + index; 
 
         //place the tile image and store image in map
-        //scene.add.image(x, y, tile);
         if(tile!='0tile'){
             imageMap[mapIndex] = scene.add.image(x, y, tile);
         }
@@ -425,7 +406,6 @@
 
     //slides a tile
     function slideTile(index, jndex, newIndex, newJndex, scene) {
-        let string = ''
         tweenRunning = true
         const mapIndex = jndex*4 + index;
         const newMapIndex = newJndex*4 + newIndex;
@@ -446,12 +426,8 @@
             onComplete: function () {
                 imageMap[newMapIndex] = imageMap[mapIndex];
                 imageMap[mapIndex] = undefined;
-                if(!shouldSpawn){
-                    tweenRunning = false
-                }
 
-                move++
-                console.log('move'+move)
+
                 if(shouldSpawn){
                     shouldSpawn = false
                     scene.time.delayedCall(20, () => {
@@ -459,19 +435,12 @@
                         placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
                         //checks if game is over
                         if(isGameOver()){
-                            tweenRunning = true
                             gameOver(scene)
                         }
-                        else{
+                        else if(!winScreen){
                             tweenRunning = false
                         }
-                        for(n=0;n<16;n++){
-                            if(imageMap[n] && imageMap[n]!=undefined){
-                                string = string + ', ' + n
-                                console.log(imageMap[n])
-                            }
-                        }
-                        console.log(string)
+                        
                     });
                 }
 
@@ -481,8 +450,8 @@
 
     //combines two tiles
     function combine(index, jndex, index2, jndex2, scene){
-        let string = ''
         tweenRunning = true
+        let result = 0 //for checking if tile is 2048 tile
         const mapIndex = jndex*4 + index;
         const mapIndex2 = jndex2*4 + index2;
 
@@ -502,7 +471,7 @@
             duration: 100, 
             onComplete: function () {
 
-                //try to destroy old image (errors when spamming keys wildly)
+                //try to destroy old image (hasnt errored with new update)
                 try {
                     imageMap[mapIndex].destroy();
                 } catch (error) {
@@ -512,7 +481,7 @@
                     });
                 }
 
-                //try to destroy old image (errors when spamming keys wildly)
+                //try to destroy old image (hasnt errored with new update)
                 try {
                     imageMap[mapIndex2].destroy();
                 } catch (error) {
@@ -522,23 +491,11 @@
                     });
                 }
                 
-                array[index2][jndex2] = Math.floor(array[index2][jndex2]) //undo the addition of 0.5
+                result = Math.floor(array[index2][jndex2])
+                array[index2][jndex2] = result //undo the addition of 0.5
 
                 tile = array[index2][jndex2] + 'tile'
                 imageMap[mapIndex2] = scene.add.image(newX, newY, tile);
-
-                
-
-                //check if the game is won every time a combination is made
-                if(!hasWon){
-                    if(array[index2][jndex2]==2048){
-                        scene.time.delayedCall(200, () => {
-                            hasWon = true
-                            win(scene)
-                        });
-                    }
-                    
-                }
 
                 //update score
                 score = score + array[index2][jndex2]
@@ -548,37 +505,38 @@
                 if(score>best){
                     best = score
                     bestText.setText(best);
-
                     localStorage.setItem('bestScore', best);
                 }
                 
-                move++
-                console.log('move'+move)
-                if(!shouldSpawn){
-                    tweenRunning = false
-                }
-                if(shouldSpawn){
-                    shouldSpawn = false
-                    scene.time.delayedCall(20, () => {
+                //delay to allow all tiles finish animation before spawning
+                scene.time.delayedCall(20, () => {
+                    if(shouldSpawn){
+                        shouldSpawn = false
                         spot = spawnSpot()
                         placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
-                        //checks if game is over
-                        if(isGameOver()){
-                            tweenRunning = true
+                        //check if the game is won every time a combination is made
+                    }
+                    if(!hasWon){
+                        if(result==2048){
+                            hasWon = true
+                            win(scene)
+                        }//checks if game is over
+                        else if(isGameOver()){
                             gameOver(scene)
                         }
                         else{
                             tweenRunning = false
                         }
-                        for(n=0;n<16;n++){
-                            if(imageMap[n] && imageMap[n]!=undefined){
-                                string = string + ', ' + n
-                                console.log(imageMap[n])
-                            }
-                        }
-                        console.log(string)
-                    });
-                }
+                    }
+                    //checks if game is over
+                    else if(isGameOver()){
+                        gameOver(scene)
+                    }
+                    else if(!winScreen){
+                        tweenRunning = false
+                    }
+                });
+                
 
             }           
         });
@@ -623,35 +581,34 @@
         againBtn.on('pointerdown', () => {
             score = 0
             scene.scene.restart();
+            hasWon = false
             tweenRunning = false
+            winScreen = false
         });
     }
 
     //display win 'pop up'
     function win(scene){
         tweenRunning = true
+        winScreen = true
         let backDrop = scene.add.image(400, 350, 'gameOver');
-        let winText = scene.add.text(400, 250, 'You Win!', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);
-        
+        let winText = scene.add.text(400, 250, 'You Win!', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);       
         let contBtn = scene.add.image(400, 350, 'keepGoing').setInteractive();
         contBtn.on('pointerdown', () => {
             contBtn.destroy();
             backDrop.destroy();
             winText.destroy();
             tweenRunning = false
+            winScreen = false
         });
     }
 
-    //for when an error occurs(typically when cannot destroy image. happens maybe because images cannot be loaded fast enough)
+    //for when an error occurs
     function errOccured(scene){
         tweenRunning = true
         let backDrop = scene.add.image(400, 350, 'gameOver');
-        let errText = scene.add.text(400, 250, 'Error', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);
-        
+        let errText = scene.add.text(400, 250, 'Error', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);        
     }
-
-    // sasddsdssdsd ssdaasddasasdas saddsdssd sasaasas asasasas
-    //assasas assasa//assa//sa  sa///saas   //asasasa   //sasasa
 
 </script>
 </body>
