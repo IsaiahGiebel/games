@@ -56,6 +56,7 @@
     var tweenRunning = false;
     var shouldSpawn = false;
     var game = new Phaser.Game(config);
+    var move = 0;
 
     function preload (){
 
@@ -208,223 +209,157 @@
         //could have put key press logic here but was not necessary       
     }
 
+
+///cssdsds   sdsdsdsddssd   sddssdssdsd   ssdsdsdsd   sdsdsdsds  sddsdsdsd
+
+
+
     //handles where tiles go for key press
     function press(scene, key){
         let x = 0;
         let comb = true;
         let spot = 0;
+        let current = null;
+        let string = ''
+        
+        shouldSpawn = true
+
+        
+        
         //if left key is pressed
         if(key === 'left'){
             for(i = 1; i<array.length; i++){
                 for(j=0;j<array.length;j++){
-                    if(array[i][j]!=0){
+                    current = array[i][j]
+                    if(current!=0){
                         x=1
                         while(i-x > -1){
-                            if(array[i-x][j]==array[i][j]){
-                                for(n = 1; n < x; n++){
-                                    if(array[i-n][j]!=0){
-                                        comb = false
+                            if(array[i-x][j]!=0){
+                                if(array[i-x][j]!=current){
+                                    if(x==1){
+                                        break
                                     }
-                                }
-                                if(comb){
-                                    shouldSpawn = true
+                                    slideTile(i,j,i-x+1,j,scene)
+                                    break
+                                } else {
                                     combine(i,j,i-x,j,scene)
+                                    break
                                 }
-                                comb = true                               
-                            }
-                            else if(array[i-x][j]==0 && i-x==0){
-                                shouldSpawn = true
-                                slideTile(i,j,i-x,j,scene)
-                            }
-                               
-                            else if(i-x-1!=-1){
-                                if(array[i-x][j]==0 && array[i-x-1][j]!=0 && array[i-x-1][j]!=array[i][j]){
-                                    shouldSpawn = true
+                                } else if(i-x == 0){
                                     slideTile(i,j,i-x,j,scene)
+                                    break
                                 }
-                                                            
-                            }
-                               
-                            x++
-                        }
-                        
-                    }
+                            x++                             
+                        }                               
+                    }                       
+                }
             }
-        }
+        
         //for spawning a new tile after at least one tile has moved
-        if(shouldSpawn){
-            tweenRunning = true
-            scene.time.delayedCall(120, () => {
-                spot = spawnSpot()
-                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
-                shouldSpawn=false
-                //checks if game is over
-                if(isGameOver()){
-                    tweenRunning = true
-                    gameOver(scene)
-                }
-                else{
-                    tweenRunning = false
-                }
-            });
-        }
-        return
+            
+            return        
         };
 
         if(key === 'right'){
             for(i = 2; i>-1; i--){
                 for(j=0;j<array.length;j++){
-                    if(array[i][j]!=0){
+                    current = array[i][j]
+                    if(current!=0){
                         x=1
                         while(i+x < 4){
-                            if(array[i+x][j]==array[i][j]){
-                                for(n = 1; n < x; n++){
-                                    if(array[i+n][j]!=0){
-                                        comb = false
+                            if(array[i+x][j]!=0){
+                                if(array[i+x][j]!=current){
+                                    if(x==1){
+                                        break
                                     }
-                                }
-                                if(comb){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i+x-1,j,scene)
+                                    break
+                                } else {
                                     shouldSpawn = true
                                     combine(i,j,i+x,j,scene)
+                                    break
                                 }
-                                comb = true                               
-                            }
-                            else if(array[i+x][j]==0 && i+x==3){
-                                shouldSpawn = true
-                                slideTile(i,j,i+x,j,scene)
-                            }
-                            
-                            else if(i+x+1!=4){
-                                if(array[i+x][j]==0 && array[i+x+1][j]!=0 && array[i+x+1][j]!=array[i][j]){
+                                } else if(i+x == 3){
                                     shouldSpawn = true
                                     slideTile(i,j,i+x,j,scene)
+                                    break
                                 }
-                            }
-                            x++
-                        }
+                            x++                             
+                        }                               
                     }
-            }
-        }
-        if(shouldSpawn){
-            tweenRunning = true
-            scene.time.delayedCall(120, () => {
-                spot = spawnSpot()
-                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
-                shouldSpawn=false
-                if(isGameOver()){
-                    tweenRunning = true
-                    gameOver(scene)
                 }
-                else{
-                    tweenRunning = false
-                }            
-            });
-        }
-        return
+            }
+            
+            return
         };
 
         if(key === 'up'){
             for(j = 1; j<array.length; j++){
                 for(i=0;i<array.length;i++){
-                    if(array[i][j]!=0){
+                    current = array[i][j]
+                    if(current!=0){
                         x=1
                         while(j-x > -1){
-                            if(array[i][j-x]==array[i][j]){
-                                for(n = 1; n < x; n++){
-                                    if(array[i][j-n]!=0){
-                                        comb = false
+                            if(array[i][j-x]!=0){
+                                if(array[i][j-x]!=current){
+                                    if(x==1){
+                                        break
                                     }
-                                }
-                                if(comb){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i,j-x+1,scene)
+                                    break
+                                } else {
                                     shouldSpawn = true
                                     combine(i,j,i,j-x,scene)
+                                    break
                                 }
-                                comb = true                               
-                            }
-                            else if(array[i][j-x]==0 && j-x==0){
-                                shouldSpawn = true
-                                slideTile(i,j,i,j-x,scene)
-                            }
-                             
-                            else if(j-x-1!=-1){
-                                if(array[i][j-x]==0 && array[i][j-x-1]!=0 && array[i][j-x-1]!=array[i][j]){
+                                } else if(j-x == 0){
                                     shouldSpawn = true
                                     slideTile(i,j,i,j-x,scene)
+                                    break
                                 }
-                            }   
-                            x++
-                        }
+                            x++                             
+                        }                               
                     }
-            }
-        }
-        if(shouldSpawn){
-            tweenRunning = true
-            scene.time.delayedCall(120, () => {
-                spot = spawnSpot()
-                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
-                shouldSpawn=false
-                if(isGameOver()){
-                    tweenRunning = true
-                    gameOver(scene)
                 }
-                else{
-                    tweenRunning = false
-                }            
-            });
-        }
-        return
+            }
+            
+            return
         };
 
         if(key === 'down'){
             for(j = 2; j>-1; j--){
                 for(i=0;i<array.length;i++){
-                    if(array[i][j]!=0){
+                    current = array[i][j]
+                    if(current!=0){
                         x=1
                         while(j+x < 4){
-                            if(array[i][j+x]==array[i][j]){
-                                for(n = 1; n < x; n++){
-                                    if(array[i][j+n]!=0){
-                                        comb = false
+                            if(array[i][j+x]!=0){
+                                if(array[i][j+x]!=current){
+                                    if(x==1){
+                                        break
                                     }
-                                }
-                                if(comb){
+                                    shouldSpawn = true
+                                    slideTile(i,j,i,j+x-1,scene)
+                                    break
+                                } else {
                                     shouldSpawn = true
                                     combine(i,j,i,j+x,scene)
+                                    break
                                 }
-                                comb = true                               
-                            }
-                            else if(array[i][j+x]==0 && j+x==3){
-                                shouldSpawn = true
-                                slideTile(i,j,i,j+x,scene)
-                            }
-                            
-                            else if(j+x+1!=4){
-                                if(array[i][j+x]==0 && array[i][j+x+1]!=0 && array[i][j+x+1]!=array[i][j]){
+                                } else if(j+x == 3){
                                     shouldSpawn = true
                                     slideTile(i,j,i,j+x,scene)
+                                    break
                                 }
-                            }
-                            x++
-                        }
+                            x++                             
+                        }                               
                     }
-            }
-        }
-        if(shouldSpawn){
-            tweenRunning = true
-            scene.time.delayedCall(120, () => {
-                spot = spawnSpot()
-                placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
-                shouldSpawn=false
-                if(isGameOver()){
-                    tweenRunning = true
-                    gameOver(scene)
                 }
-                else{
-                    tweenRunning = false
-                }            
-            });
-        }
-        return
+            }
+            
+            return
         };
     }
 
@@ -490,6 +425,7 @@
 
     //slides a tile
     function slideTile(index, jndex, newIndex, newJndex, scene) {
+        let string = ''
         tweenRunning = true
         const mapIndex = jndex*4 + index;
         const newMapIndex = newJndex*4 + newIndex;
@@ -510,13 +446,42 @@
             onComplete: function () {
                 imageMap[newMapIndex] = imageMap[mapIndex];
                 imageMap[mapIndex] = undefined;
-                tweenRunning = false;
+                if(!shouldSpawn){
+                    tweenRunning = false
+                }
+
+                move++
+                console.log('move'+move)
+                if(shouldSpawn){
+                    shouldSpawn = false
+                    scene.time.delayedCall(20, () => {
+                        spot = spawnSpot()
+                        placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                        //checks if game is over
+                        if(isGameOver()){
+                            tweenRunning = true
+                            gameOver(scene)
+                        }
+                        else{
+                            tweenRunning = false
+                        }
+                        for(n=0;n<16;n++){
+                            if(imageMap[n] && imageMap[n]!=undefined){
+                                string = string + ', ' + n
+                                console.log(imageMap[n])
+                            }
+                        }
+                        console.log(string)
+                    });
+                }
+
             }            
         });    
     }
 
     //combines two tiles
     function combine(index, jndex, index2, jndex2, scene){
+        let string = ''
         tweenRunning = true
         const mapIndex = jndex*4 + index;
         const mapIndex2 = jndex2*4 + index2;
@@ -537,7 +502,7 @@
             duration: 100, 
             onComplete: function () {
 
-                //try to destroy old image (frequently errors)
+                //try to destroy old image (errors when spamming keys wildly)
                 try {
                     imageMap[mapIndex].destroy();
                 } catch (error) {
@@ -547,7 +512,7 @@
                     });
                 }
 
-                //try to destroy old image (frequently errors)
+                //try to destroy old image (errors when spamming keys wildly)
                 try {
                     imageMap[mapIndex2].destroy();
                 } catch (error) {
@@ -562,7 +527,6 @@
                 tile = array[index2][jndex2] + 'tile'
                 imageMap[mapIndex2] = scene.add.image(newX, newY, tile);
 
-                tweenRunning = false;
                 
 
                 //check if the game is won every time a combination is made
@@ -587,6 +551,35 @@
 
                     localStorage.setItem('bestScore', best);
                 }
+                
+                move++
+                console.log('move'+move)
+                if(!shouldSpawn){
+                    tweenRunning = false
+                }
+                if(shouldSpawn){
+                    shouldSpawn = false
+                    scene.time.delayedCall(20, () => {
+                        spot = spawnSpot()
+                        placeTile(scene,twoFour(),parseInt(spot[0]),parseInt(spot[1]));
+                        //checks if game is over
+                        if(isGameOver()){
+                            tweenRunning = true
+                            gameOver(scene)
+                        }
+                        else{
+                            tweenRunning = false
+                        }
+                        for(n=0;n<16;n++){
+                            if(imageMap[n] && imageMap[n]!=undefined){
+                                string = string + ', ' + n
+                                console.log(imageMap[n])
+                            }
+                        }
+                        console.log(string)
+                    });
+                }
+
             }           
         });
     }
@@ -656,6 +649,9 @@
         let errText = scene.add.text(400, 250, 'Error', { fontSize: '48px', fill: '#000', fontFamily: '"Roboto", sans-serif' }).setOrigin(0.5, 0.5);
         
     }
+
+    // sasddsdssdsd ssdaasddasasdas saddsdssd sasaasas asasasas
+    //assasas assasa//assa//sa  sa///saas   //asasasa   //sasasa
 
 </script>
 </body>
